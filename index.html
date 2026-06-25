@@ -186,16 +186,52 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .empty { text-align: center; color: var(--muted); padding: 50px 20px; }
 .empty .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.6; }
 .empty p { font-size: 0.88rem; line-height: 1.6; }
+
+/* ── AUTH PAGE ── */
+#pg-auth { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+.auth-container { width: 100%; max-width: 380px; }
+.auth-hero { text-align: center; margin-bottom: 32px; }
+.auth-hero .icon { font-size: 3rem; margin-bottom: 10px; }
+.auth-hero h1 { font-size: 1.8rem; font-weight: 900; letter-spacing: -0.03em; }
+.auth-hero p { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+.auth-tabs { display: flex; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+.auth-tab { flex: 1; background: none; border: none; color: var(--muted); padding: 10px; border-radius: 9px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.auth-tab.active { background: var(--card2); color: var(--text); }
+.auth-card { background: var(--card); border: 1px solid var(--border2); border-radius: var(--radius); padding: 20px; }
+.auth-error { color: var(--danger); font-size: 0.82rem; margin-bottom: 12px; display: none; background: var(--danger-dim); border-radius: 8px; padding: 10px 12px; }
+.auth-account-btn { background: var(--card2); border: 1px solid var(--border2); color: var(--text2); padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.auth-account-btn:active { border-color: var(--danger); color: var(--danger); }
 </style>
 </head>
 <body>
 
+<!-- ══ 0. AUTH PAGE ══ -->
+<div id="pg-auth" style="display:none;">
+  <div class="auth-container">
+    <div class="auth-hero">
+      <div class="icon">🃏</div>
+      <h1>Poker Tracker</h1>
+      <p>Sign in to access your sessions</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-signin">Sign In</button>
+      <button class="auth-tab" id="tab-signup">Create Account</button>
+    </div>
+    <div class="auth-card">
+      <div class="auth-error" id="auth-error"></div>
+      <input class="modal-input" type="email" id="auth-email" placeholder="Email address" autocomplete="off">
+      <input class="modal-input" type="password" id="auth-password" placeholder="Password (min 6 characters)">
+      <button class="btn-primary" id="btn-auth-submit">Sign In</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ 1. SESSIONS PAGE ══ -->
-<div id="pg-sessions">
+<div id="pg-sessions" style="display:none;">
   <div class="topnav">
     <div class="spacer"></div>
     <h1>🃏 Poker Tracker</h1>
-    <div class="spacer"></div>
+    <button class="auth-account-btn" id="btn-logout">Sign Out</button>
   </div>
   <div class="page">
     <button class="new-session-btn" id="btn-new-session">＋ New Session</button>
@@ -356,6 +392,8 @@ var COLORS = ['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#f97316','#06b6
 var muTargetId = null;
 var muDonorId = null;
 var selectedHV = DEFAULT_HV;
+var currentUser = null;
+var authMode = 'signin';
 
 function hv(s) { return (s && s.handValue) || DEFAULT_HV; }
 
@@ -370,8 +408,8 @@ function initSupabase() {
 // ── Storage ──
 function save() {
   try { localStorage.setItem('poker_v7', JSON.stringify(state)); } catch(e) {}
-  if (db) {
-    db.from('poker_state').upsert({ id: 'default', data: state, updated_at: new Date().toISOString() }).then(function(){}).catch(function(){});
+  if (db && currentUser) {
+    db.from('poker_state').upsert({ id: currentUser.id, data: state, updated_at: new Date().toISOString() }).then(function(){}).catch(function(){});
   }
 }
 function load() {
@@ -395,14 +433,63 @@ function load() {
   } catch(e) {}
 }
 function loadFromSupabase() {
-  if (!db) return;
-  db.from('poker_state').select('data').eq('id', 'default').single().then(function(res) {
+  if (!db || !currentUser) return;
+  db.from('poker_state').select('data').eq('id', currentUser.id).single().then(function(res) {
     if (res.data && res.data.data) {
       state = res.data.data;
       try { localStorage.setItem('poker_v7', JSON.stringify(state)); } catch(e) {}
       showSessions();
     }
   }).catch(function(){});
+}
+
+// ── Auth ──
+function checkAuth() {
+  if (!db) { showSessions(); return; }
+  db.auth.getSession().then(function(res) {
+    if (res.data && res.data.session) {
+      currentUser = res.data.session.user;
+      load(); showSessions(); loadFromSupabase();
+    } else {
+      showAuth();
+    }
+  }).catch(function() { showAuth(); });
+}
+
+function authSubmit() {
+  var email = document.getElementById('auth-email').value.trim();
+  var password = document.getElementById('auth-password').value;
+  var errEl = document.getElementById('auth-error');
+  var btn = document.getElementById('btn-auth-submit');
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = ''; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = ''; return; }
+  btn.textContent = authMode === 'signin' ? 'Signing in...' : 'Creating account...';
+  btn.disabled = true;
+  var authCall = authMode === 'signin'
+    ? db.auth.signInWithPassword({ email: email, password: password })
+    : db.auth.signUp({ email: email, password: password });
+  authCall.then(function(res) {
+    btn.disabled = false;
+    btn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+    if (res.error) { errEl.textContent = res.error.message; errEl.style.display = ''; return; }
+    currentUser = res.data.user;
+    state = { sessions: [], currentId: null };
+    load(); showSessions(); loadFromSupabase();
+  }).catch(function(e) {
+    btn.disabled = false;
+    btn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+    errEl.textContent = 'Something went wrong. Please try again.'; errEl.style.display = '';
+  });
+}
+
+function signOut() {
+  if (!db) return;
+  db.auth.signOut().then(function() {
+    currentUser = null;
+    state = { sessions: [], currentId: null };
+    showAuth();
+  });
 }
 
 // ── Utils ──
@@ -469,9 +556,10 @@ function renderSteps(containerId, steps) {
 
 // ── Pages ──
 function hidAll() {
-  var ids = ['pg-sessions','pg-detail','pg-chips','pg-makeup','pg-summary'];
+  var ids = ['pg-auth','pg-sessions','pg-detail','pg-chips','pg-makeup','pg-summary'];
   for (var i = 0; i < ids.length; i++) document.getElementById(ids[i]).style.display = 'none';
 }
+function showAuth() { hidAll(); document.getElementById('pg-auth').style.display = ''; }
 function muOn() { var s = currentSession(); return s && s.makeupEnabled !== false; }
 function showSessions() { hidAll(); document.getElementById('pg-sessions').style.display = ''; renderSessions(); window.scrollTo(0,0); }
 function showDetail()   { hidAll(); document.getElementById('pg-detail').style.display = '';   renderDetail();   window.scrollTo(0,0); }
@@ -1022,11 +1110,31 @@ document.getElementById('input-mu-chips').addEventListener('keydown', function(e
   document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) closeModal(id); });
 });
 
+// ── Auth button wiring ──
+document.getElementById('tab-signin').addEventListener('click', function() {
+  authMode = 'signin';
+  document.getElementById('tab-signin').classList.add('active');
+  document.getElementById('tab-signup').classList.remove('active');
+  document.getElementById('btn-auth-submit').textContent = 'Sign In';
+  document.getElementById('auth-error').style.display = 'none';
+});
+document.getElementById('tab-signup').addEventListener('click', function() {
+  authMode = 'signup';
+  document.getElementById('tab-signup').classList.add('active');
+  document.getElementById('tab-signin').classList.remove('active');
+  document.getElementById('btn-auth-submit').textContent = 'Create Account';
+  document.getElementById('auth-error').style.display = 'none';
+});
+document.getElementById('btn-auth-submit').addEventListener('click', authSubmit);
+document.getElementById('auth-email').addEventListener('keydown', function(e) { if (e.key === 'Enter') authSubmit(); });
+document.getElementById('auth-password').addEventListener('keydown', function(e) { if (e.key === 'Enter') authSubmit(); });
+document.getElementById('btn-logout').addEventListener('click', function() {
+  if (confirm('Sign out?')) signOut();
+});
+
 // ── Init ──
 initSupabase();
-load();
-showSessions();
-loadFromSupabase();
+checkAuth();
 </script>
 </body>
 </html>
