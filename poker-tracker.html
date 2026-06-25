@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Poker Tracker</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #0d0f18; --surface: #161926; --card: #1e2235; --card2: #252a40;
+  --accent: #f59e0b; --accent-dim: rgba(245,158,11,0.13);
+  --green: #10b981; --green-dim: rgba(16,185,129,0.12);
+  --danger: #ef4444; --danger-dim: rgba(239,68,68,0.1);
+  --purple: #8b5cf6; --purple-dim: rgba(139,92,246,0.14);
+  --text: #f1f5f9; --text2: #cbd5e1; --muted: #64748b;
+  --border: #272d45; --border2: #313756; --radius: 16px; --radius-sm: 10px;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+/* ── NAV ── */
+.topnav {
+  background: rgba(22,25,38,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50; width: 100%;
+}
+.topnav h1 { font-size: 0.95rem; font-weight: 800; text-align: center; letter-spacing: -0.01em; }
+.topnav .spacer { width: 80px; }
+.back-btn { background: var(--card2); border: 1px solid var(--border2); color: var(--text2); padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.back-btn:active { opacity: 0.7; }
+.next-btn { background: var(--accent); border: none; color: #000; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 800; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(245,158,11,0.35); }
+.next-btn:active { opacity: 0.8; transform: scale(0.95); }
+
+/* ── STEP INDICATOR ── */
+.steps { display: flex; align-items: center; padding: 13px 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.step-dot { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1; }
+.step-dot .dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; background: var(--card); color: var(--muted); border: 2px solid var(--border2); }
+.step-dot .dot.active { background: var(--accent); color: #000; border-color: var(--accent); box-shadow: 0 0 14px rgba(245,158,11,0.45); }
+.step-dot .dot.done { background: var(--green); color: #fff; border-color: var(--green); }
+.step-dot .lbl { font-size: 0.58rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+.step-dot .lbl.active { color: var(--accent); }
+.step-dot .lbl.done { color: var(--green); }
+.step-line { flex: 0 0 20px; height: 2px; background: var(--border); margin-bottom: 18px; border-radius: 2px; }
+.step-line.done { background: var(--green); }
+
+/* ── PAGE ── */
+.page { padding: 16px; max-width: 680px; margin: 0 auto; width: 100%; }
+
+/* ── SESSIONS ── */
+.new-session-btn { width: 100%; background: linear-gradient(135deg,#f59e0b,#d97706); color: #000; border: none; border-radius: var(--radius); padding: 17px; font-size: 1rem; font-weight: 800; cursor: pointer; margin-bottom: 20px; letter-spacing: -0.01em; box-shadow: 0 4px 18px rgba(245,158,11,0.3); }
+.new-session-btn:active { opacity: 0.85; transform: scale(0.99); }
+.section-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+.session-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+.session-card:active { background: var(--card2); border-color: var(--border2); }
+.s-icon { width: 46px; height: 46px; border-radius: 13px; background: var(--accent-dim); border: 1px solid rgba(245,158,11,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+.session-card .s-info { flex: 1; min-width: 0; }
+.session-card .s-info h3 { font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-card .s-info p { font-size: 0.73rem; color: var(--muted); margin-top: 3px; }
+.session-card .s-stat { text-align: right; flex-shrink: 0; }
+.session-card .s-stat .big { font-size: 1.3rem; font-weight: 900; color: var(--accent); letter-spacing: -0.03em; }
+.session-card .s-stat .lbl { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.del-btn { background: none; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 6px; flex-shrink: 0; opacity: 0.55; }
+.del-btn:active { color: var(--danger); opacity: 1; }
+
+/* ── MODAL ── */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.82); z-index: 200; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.modal-overlay.open { display: flex; }
+.modal-box { background: var(--surface); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border2); border-left: 1px solid var(--border2); border-right: 1px solid var(--border2); padding: 0 20px 44px; width: 100%; max-width: 680px; }
+.modal-box::before { content: ''; display: block; width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 12px auto 20px; }
+.modal-box h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.02em; }
+.modal-input { width: 100%; background: var(--card); border: 1.5px solid var(--border2); color: var(--text); border-radius: var(--radius-sm); padding: 13px 14px; font-size: 1rem; font-weight: 500; outline: none; margin-bottom: 12px; -webkit-appearance: none; appearance: none; }
+.modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+.modal-actions { display: flex; gap: 10px; }
+.btn-primary { flex: 1; background: linear-gradient(135deg,#f59e0b,#d97706); color: #000; border: none; border-radius: var(--radius-sm); padding: 15px; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 2px 10px rgba(245,158,11,0.3); }
+.btn-primary:active { opacity: 0.85; }
+.btn-secondary { flex: 1; background: var(--card); color: var(--text2); border: 1.5px solid var(--border2); border-radius: var(--radius-sm); padding: 15px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+.btn-secondary:active { opacity: 0.7; }
+
+/* ── SESSION DETAIL ── */
+.session-header { background: linear-gradient(160deg,var(--card),var(--card2)); border: 1px solid var(--border2); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+.session-header h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.02em; }
+.stats-row { display: flex; gap: 7px; }
+.stat-box { flex: 1; background: rgba(0,0,0,0.22); border: 1px solid var(--border); border-radius: 12px; padding: 10px 6px; text-align: center; }
+.stat-box .val { font-size: 1.3rem; font-weight: 900; color: var(--accent); letter-spacing: -0.03em; }
+.stat-box .key { font-size: 0.58rem; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; }
+.player-action-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.add-player-btn { flex: 1; background: transparent; border: 2px dashed var(--border2); color: var(--muted); border-radius: var(--radius); padding: 13px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.add-player-btn:active { border-color: var(--accent); color: var(--accent); }
+.freq-btn { background: var(--card2); border: 1px solid var(--border2); color: var(--text2); border-radius: var(--radius); padding: 13px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.freq-btn:active { border-color: var(--accent); color: var(--accent); }
+.freq-chip { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1.5px solid var(--border2); border-radius: var(--radius-sm); padding: 11px 14px; margin-bottom: 8px; cursor: pointer; }
+.freq-chip:active { border-color: var(--accent); background: var(--accent-dim); }
+.freq-chip.added { border-color: var(--green); background: var(--green-dim); cursor: default; }
+.freq-chip .fc-name { font-weight: 700; font-size: 0.95rem; }
+.freq-chip .fc-meta { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.freq-chip .fc-badge { font-size: 0.72rem; font-weight: 700; color: var(--green); background: var(--green-dim); border-radius: 6px; padding: 3px 8px; flex-shrink: 0; }
+.freq-chip.added .fc-badge { content: '✓ Added'; }
+
+/* ── PLAYER CARD ── */
+.player-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
+.player-card-top { display: flex; align-items: center; gap: 12px; }
+.player-avatar { width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; flex-shrink: 0; color: #000; }
+.player-info { flex: 1; min-width: 0; }
+.player-info .name { font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-info .sub { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
+.player-info .pts { font-size: 0.78rem; color: var(--green); font-weight: 700; margin-top: 2px; }
+.undo-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); border: 1.5px solid var(--border2); color: var(--muted); font-size: 0.9rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.undo-btn:active { border-color: var(--accent); color: var(--accent); }
+.remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; padding: 4px; flex-shrink: 0; opacity: 0.45; }
+.remove-btn:active { color: var(--danger); opacity: 1; }
+.buy-btn { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#f59e0b,#d97706); border: none; color: #000; font-size: 1.8rem; font-weight: 900; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(245,158,11,0.45); }
+.buy-btn:active { transform: scale(0.88); box-shadow: 0 2px 6px rgba(245,158,11,0.25); }
+
+/* ── QUICK ADD ROW ── */
+.quick-add-row { display: flex; gap: 6px; background: var(--surface); border-radius: 10px; padding: 5px; }
+.qadd-btn { flex: 1; background: var(--card2); border: 1px solid var(--border); color: var(--text2); border-radius: 7px; padding: 8px 0; font-size: 0.78rem; font-weight: 800; cursor: pointer; text-align: center; }
+.qadd-btn:active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* ── END / TOGGLE ── */
+.end-session-btn { width: 100%; background: linear-gradient(135deg,#10b981,#059669); color: #fff; border: none; border-radius: var(--radius); padding: 16px; font-size: 1rem; font-weight: 800; cursor: pointer; margin-top: 4px; margin-bottom: 20px; letter-spacing: -0.01em; box-shadow: 0 4px 16px rgba(16,185,129,0.3); }
+.end-session-btn:active { opacity: 0.85; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+.toggle-row .t-label { font-size: 0.9rem; font-weight: 700; }
+.toggle-row .t-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.toggle { position: relative; display: inline-block; width: 48px; height: 28px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--border2); border-radius: 28px; cursor: pointer; transition: background 0.2s; }
+.toggle-slider:before { content: ''; position: absolute; width: 20px; height: 20px; left: 4px; top: 4px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.toggle input:checked + .toggle-slider { background: var(--purple); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+/* ── CHIP COUNT PAGE ── */
+.co-player { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+.co-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.co-top .player-info { flex: 1; min-width: 0; }
+.pl-badge { font-size: 1rem; font-weight: 800; flex-shrink: 0; min-width: 64px; text-align: right; letter-spacing: -0.02em; }
+.pl-badge.profit { color: var(--green); }
+.pl-badge.loss { color: var(--danger); }
+.pl-badge.even { color: var(--muted); }
+.co-input-row { display: flex; align-items: center; gap: 10px; }
+.co-input-row label { font-size: 0.76rem; color: var(--muted); flex-shrink: 0; font-weight: 600; }
+.co-input { flex: 1; background: var(--surface); border: 1.5px solid var(--border2); color: var(--text); border-radius: var(--radius-sm); padding: 11px 14px; font-size: 1rem; font-weight: 600; outline: none; -webkit-appearance: none; appearance: none; }
+.co-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+
+/* ── HAND VALUE PICKER ── */
+.hv-label { font-size: 0.68rem; color: var(--muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.hv-presets { display: flex; gap: 7px; margin-bottom: 12px; }
+.hv-btn { flex: 1; background: var(--card); border: 1.5px solid var(--border2); color: var(--text2); border-radius: var(--radius-sm); padding: 11px 4px; font-size: 0.88rem; font-weight: 700; cursor: pointer; text-align: center; }
+.hv-btn.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* ── MAKE UP PAGE ── */
+.makeup-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--purple-dim); color: #c4b5fd; border-radius: 6px; font-size: 0.68rem; font-weight: 700; padding: 3px 8px; margin-top: 3px; }
+.given-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--danger-dim); color: #fca5a5; border-radius: 6px; font-size: 0.68rem; font-weight: 700; padding: 3px 8px; margin-top: 3px; }
+.mu-row { display: flex; gap: 8px; margin-top: 10px; }
+.mu-add-btn { background: var(--purple); border: none; color: #fff; border-radius: var(--radius-sm); padding: 10px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; flex-shrink: 0; box-shadow: 0 2px 8px rgba(139,92,246,0.3); }
+.mu-add-btn:active { opacity: 0.85; }
+.mu-undo-btn { background: none; border: 1.5px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.82rem; cursor: pointer; flex-shrink: 0; }
+.donor-label { font-size: 0.68rem; color: var(--muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.donor-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.donor-btn { background: var(--card); border: 1.5px solid var(--border2); color: var(--text2); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+.donor-btn.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* ── SUMMARY PAGE ── */
+.summary-card { border-radius: var(--radius); padding: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
+.summary-card.win { background: linear-gradient(135deg,rgba(16,185,129,0.13),rgba(16,185,129,0.05)); border: 1px solid rgba(16,185,129,0.28); }
+.summary-card.loss { background: linear-gradient(135deg,rgba(239,68,68,0.1),rgba(239,68,68,0.04)); border: 1px solid rgba(239,68,68,0.2); }
+.summary-card.even { background: var(--card); border: 1px solid var(--border); }
+.rank-badge { font-size: 1.3rem; flex-shrink: 0; width: 34px; text-align: center; }
+.summary-info { flex: 1; min-width: 0; }
+.summary-info .name { font-weight: 800; font-size: 1rem; letter-spacing: -0.01em; }
+.summary-info .detail { font-size: 0.7rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.summary-pl { font-size: 1.5rem; font-weight: 900; flex-shrink: 0; letter-spacing: -0.03em; }
+.summary-pl.profit { color: var(--green); }
+.summary-pl.loss { color: var(--danger); }
+.summary-pl.even { color: var(--muted); }
+.summary-totals { background: linear-gradient(160deg,var(--card),var(--card2)); border: 1px solid var(--border2); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+.summary-totals h2 { font-size: 1rem; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.02em; }
+.done-btn { width: 100%; background: linear-gradient(135deg,#f59e0b,#d97706); color: #000; border: none; border-radius: var(--radius); padding: 16px; font-size: 1rem; font-weight: 800; cursor: pointer; margin-top: 8px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(245,158,11,0.3); letter-spacing: -0.01em; }
+.done-btn:active { opacity: 0.85; }
+
+/* ── EMPTY ── */
+.empty { text-align: center; color: var(--muted); padding: 50px 20px; }
+.empty .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.6; }
+.empty p { font-size: 0.88rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- ══ 1. SESSIONS PAGE ══ -->
+<div id="pg-sessions">
+  <div class="topnav">
+    <div class="spacer"></div>
+    <h1>🃏 Poker Tracker</h1>
+    <div class="spacer"></div>
+  </div>
+  <div class="page">
+    <button class="new-session-btn" id="btn-new-session">＋ New Session</button>
+    <div class="section-label">Sessions</div>
+    <div id="sessions-list"></div>
+  </div>
+</div>
+
+<!-- ══ 2. SESSION DETAIL PAGE ══ -->
+<div id="pg-detail" style="display:none;">
+  <div class="topnav">
+    <button class="back-btn" id="btn-detail-back">← Sessions</button>
+    <h1 id="detail-nav-title"></h1>
+    <div class="spacer"></div>
+  </div>
+  <div class="page">
+    <div class="session-header">
+      <h2 id="detail-name"></h2>
+      <div class="stats-row">
+        <div class="stat-box"><div class="val" id="stat-players">0</div><div class="key">Players</div></div>
+        <div class="stat-box"><div class="val" id="stat-buyins">0</div><div class="key">Buy-ins</div></div>
+        <div class="stat-box"><div class="val" id="stat-hands">0</div><div class="key">Hands</div></div>
+        <div class="stat-box"><div class="val" id="stat-points">0</div><div class="key">Points</div></div>
+      </div>
+    </div>
+    <div class="player-action-row">
+      <button class="add-player-btn" id="btn-add-player">＋ Add Player</button>
+      <button class="freq-btn" id="btn-frequent">⭐ Frequent</button>
+    </div>
+    <div id="players-list"></div>
+    <div class="toggle-row">
+      <div>
+        <div class="t-label">Make Up</div>
+        <div class="t-sub">Allow players to give chips/hands to others</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-makeup" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <button class="end-session-btn" id="btn-end-session">End Session → Cash Out</button>
+  </div>
+</div>
+
+<!-- ══ 3. CHIP COUNT PAGE ══ -->
+<div id="pg-chips" style="display:none;">
+  <div class="topnav">
+    <button class="back-btn" id="btn-chips-back">← Back</button>
+    <h1>Chip Count</h1>
+    <button class="next-btn" id="btn-chips-next">Next →</button>
+  </div>
+  <div id="steps-chips" class="steps"></div>
+  <div class="page">
+    <div id="chip-list"></div>
+  </div>
+</div>
+
+<!-- ══ 4. MAKE UP PAGE ══ -->
+<div id="pg-makeup" style="display:none;">
+  <div class="topnav">
+    <button class="back-btn" id="btn-makeup-back">← Back</button>
+    <h1>Make Up</h1>
+    <button class="next-btn" id="btn-makeup-next">Next →</button>
+  </div>
+  <div id="steps-makeup" class="steps"></div>
+  <div class="page">
+    <div id="makeup-list"></div>
+  </div>
+</div>
+
+<!-- ══ 5. SUMMARY PAGE ══ -->
+<div id="pg-summary" style="display:none;">
+  <div class="topnav">
+    <button class="back-btn" id="btn-summary-back">← Back</button>
+    <h1>Win / Loss</h1>
+    <div class="spacer"></div>
+  </div>
+  <div id="steps-summary" class="steps"></div>
+  <div class="page">
+    <div id="summary-list"></div>
+    <button class="done-btn" id="btn-done">✓ Done</button>
+  </div>
+</div>
+
+<!-- ══ NEW SESSION MODAL ══ -->
+<div class="modal-overlay" id="modal-session">
+  <div class="modal-box">
+    <h2>New Session</h2>
+    <input class="modal-input" type="text" id="input-session-name" placeholder="e.g. Friday Night" maxlength="40" autocomplete="off">
+    <div class="hv-label">1 hand =</div>
+    <div class="hv-presets">
+      <button class="hv-btn selected" data-hv="500">500</button>
+      <button class="hv-btn" data-hv="1000">1,000</button>
+      <button class="hv-btn" data-hv="2000">2,000</button>
+      <button class="hv-btn" data-hv="custom">Custom</button>
+    </div>
+    <input class="modal-input" type="number" id="input-hv-custom" placeholder="Enter chips per hand" min="1" autocomplete="off" style="display:none;margin-bottom:14px">
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btn-session-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-session-create">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FREQUENT PLAYERS MODAL ══ -->
+<div class="modal-overlay" id="modal-frequent">
+  <div class="modal-box">
+    <h2>Frequent Players</h2>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;">Tap a name to add them instantly.</p>
+    <div id="freq-list"></div>
+    <div class="modal-actions" style="margin-top:8px;">
+      <button class="btn-secondary" id="btn-frequent-close">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD PLAYER MODAL ══ -->
+<div class="modal-overlay" id="modal-player">
+  <div class="modal-box">
+    <h2>Add Player</h2>
+    <input class="modal-input" type="text" id="input-player-name" placeholder="Player name" maxlength="30" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btn-player-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-player-add">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAKE UP MODAL ══ -->
+<div class="modal-overlay" id="modal-makeup">
+  <div class="modal-box">
+    <h2 id="mu-modal-title">Make Up</h2>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;" id="mu-modal-sub"></p>
+    <div class="donor-label">Who is giving the make up?</div>
+    <div class="donor-btns" id="mu-donor-btns"></div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <div style="flex:1">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Hands <span style="color:var(--border)" id="mu-hands-label">(×500 pts)</span></div>
+        <input class="modal-input" type="number" id="input-mu-hands" placeholder="0" min="0" autocomplete="off" style="margin-bottom:0">
+      </div>
+      <div style="flex:1">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Chips (pts)</div>
+        <input class="modal-input" type="number" id="input-mu-chips" placeholder="0" min="0" autocomplete="off" style="margin-bottom:0">
+      </div>
+    </div>
+    <div id="mu-total-preview" style="font-size:0.85rem;color:var(--accent);text-align:center;margin-bottom:14px;min-height:1.2em;"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btn-mu-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-mu-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var DEFAULT_HV = 500;
+var state = { sessions: [], currentId: null };
+var COLORS = ['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#f97316','#06b6d4','#84cc16'];
+var muTargetId = null;
+var muDonorId = null;
+var selectedHV = DEFAULT_HV; // hand value chosen in new-session modal
+
+function hv(s) { return (s && s.handValue) || DEFAULT_HV; }
+
+// ── Storage ──
+function save() { try { localStorage.setItem('poker_v7', JSON.stringify(state)); } catch(e) {} }
+function load() {
+  try {
+    var d = localStorage.getItem('poker_v7');
+    if (d) { state = JSON.parse(d); return; }
+    // migrate from v6
+    var old = localStorage.getItem('poker_v6');
+    if (old) {
+      state = JSON.parse(old);
+      for (var i = 0; i < state.sessions.length; i++) {
+        for (var j = 0; j < state.sessions[i].players.length; j++) {
+          var p = state.sessions[i].players[j];
+          if (!p.makeupTxns) {
+            p.makeupTxns = p.makeup > 0 ? [{ pts: p.makeup, donorId: '' }] : [];
+          }
+          delete p.makeup;
+        }
+      }
+      save();
+    }
+  } catch(e) {}
+}
+
+// ── Utils ──
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n) { var a = Math.abs(n); return (n < 0 ? '-' : '') + (a >= 1000 ? (a/1000).toFixed(1).replace(/\.0$/,'')+'k' : String(a)); }
+function fmtDiff(n) { return (n >= 0 ? '+' : '') + fmt(n); }
+function fmtMu(pts, handVal) {
+  var h = handVal || DEFAULT_HV;
+  var hands = Math.floor(pts / h), chips = pts % h, parts = [];
+  if (hands > 0) parts.push(hands + ' hand' + (hands !== 1 ? 's' : ''));
+  if (chips > 0) parts.push(fmt(chips) + ' chips');
+  return parts.join(' + ') + ' (+' + fmt(pts) + ' pts)';
+}
+function currentSession() {
+  for (var i = 0; i < state.sessions.length; i++) {
+    if (state.sessions[i].id === state.currentId) return state.sessions[i];
+  }
+  return null;
+}
+
+// ── Compute makeup received/given per player from transaction list ──
+// Each player has makeupTxns: [{pts, donorId}]
+// received = sum of own txns.pts
+// given    = sum of txns in OTHER players where donorId === this player
+function computeMu(s) {
+  var res = {};
+  for (var i = 0; i < s.players.length; i++) res[s.players[i].id] = { received: 0, given: 0 };
+  for (var i = 0; i < s.players.length; i++) {
+    var txns = s.players[i].makeupTxns || [];
+    for (var j = 0; j < txns.length; j++) {
+      res[s.players[i].id].received += txns[j].pts;
+      if (res[txns[j].donorId] !== undefined) res[txns[j].donorId].given += txns[j].pts;
+    }
+  }
+  return res;
+}
+function playerPL(p, mu, handVal) {
+  return (p.cashout || 0) + mu.received - mu.given - (p.buyins * (handVal || DEFAULT_HV));
+}
+
+// ── Modals ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Step indicator ──
+// steps: array of { label, active?, done? }
+function renderSteps(containerId, steps) {
+  var html = '';
+  for (var i = 0; i < steps.length; i++) {
+    var s = steps[i];
+    var cls = s.done ? 'done' : (s.active ? 'active' : '');
+    var dot = s.done ? '✓' : String(i + 1);
+    html += '<div class="step-dot">' +
+      '<div class="dot ' + cls + '">' + dot + '</div>' +
+      '<div class="lbl ' + cls + '">' + s.label + '</div>' +
+    '</div>';
+    if (i < steps.length - 1) {
+      html += '<div class="step-line' + (s.done ? ' done' : '') + '"></div>';
+    }
+  }
+  document.getElementById(containerId).innerHTML = html;
+}
+
+// ── Pages ──
+function hidAll() {
+  var ids = ['pg-sessions','pg-detail','pg-chips','pg-makeup','pg-summary'];
+  for (var i = 0; i < ids.length; i++) document.getElementById(ids[i]).style.display = 'none';
+}
+function muOn() { var s = currentSession(); return s && s.makeupEnabled !== false; }
+function showSessions() { hidAll(); document.getElementById('pg-sessions').style.display = ''; renderSessions(); window.scrollTo(0,0); }
+function showDetail()   { hidAll(); document.getElementById('pg-detail').style.display = '';   renderDetail();   window.scrollTo(0,0); }
+function showChips() {
+  hidAll(); document.getElementById('pg-chips').style.display = ''; renderChips();
+  renderSteps('steps-chips', muOn() ? [{ label:'Chip Count',active:true },{ label:'Make Up' },{ label:'Summary' }] : [{ label:'Chip Count',active:true },{ label:'Summary' }]);
+  window.scrollTo(0,0);
+}
+function showMakeup() {
+  hidAll(); document.getElementById('pg-makeup').style.display = ''; renderMakeup();
+  renderSteps('steps-makeup', [{ label:'Chip Count',done:true },{ label:'Make Up',active:true },{ label:'Summary' }]);
+  window.scrollTo(0,0);
+}
+function showSummary() {
+  hidAll(); document.getElementById('pg-summary').style.display = ''; renderSummary();
+  renderSteps('steps-summary', muOn()
+    ? [{ label:'Chip Count',done:true },{ label:'Make Up',done:true },{ label:'Summary',active:true }]
+    : [{ label:'Chip Count',done:true },{ label:'Summary',active:true }]);
+  window.scrollTo(0,0);
+}
+
+// ── Sessions ──
+function renderSessions() {
+  var el = document.getElementById('sessions-list');
+  if (!state.sessions.length) {
+    el.innerHTML = '<div class="empty"><div class="icon">🃏</div><p>No sessions yet.<br>Tap "New Session" to start.</p></div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < state.sessions.length; i++) {
+    var s = state.sessions[i];
+    var total = 0;
+    for (var j = 0; j < s.players.length; j++) total += s.players[j].buyins;
+    var done = s.players.length > 0 && s.players.every(function(p) { return p.cashout !== null && p.cashout !== undefined; });
+    var handLabel = s.handValue ? fmt(s.handValue) + ' pts/hand' : '500 pts/hand';
+    html += '<div class="session-card" data-id="' + s.id + '">' +
+      '<div class="s-icon">🃏</div>' +
+      '<div class="s-info"><h3>' + esc(s.name) + '</h3>' +
+      '<p>' + s.date + ' · ' + s.players.length + ' player' + (s.players.length !== 1 ? 's' : '') + ' · ' + handLabel + (done ? ' · <span style="color:var(--green)">✓ done</span>' : '') + '</p></div>' +
+      '<div class="s-stat"><div class="big">' + total + '</div><div class="lbl">hands</div></div>' +
+      '<button class="del-btn" data-del="' + s.id + '">🗑</button></div>';
+  }
+  el.innerHTML = html;
+}
+
+function createSession() {
+  var name = document.getElementById('input-session-name').value.trim();
+  if (!name) { document.getElementById('input-session-name').focus(); return; }
+  if (!selectedHV || selectedHV < 1) { alert('Please set the chip value for 1 hand.'); return; }
+  var s = { id: uid(), name: name, date: new Date().toLocaleDateString(), players: [], makeupEnabled: true, handValue: selectedHV };
+  state.sessions.unshift(s);
+  state.currentId = s.id;
+  save(); closeModal('modal-session'); showDetail();
+}
+
+function deleteSession(id) {
+  if (!confirm('Delete this session?')) return;
+  state.sessions = state.sessions.filter(function(s) { return s.id !== id; });
+  save(); renderSessions();
+}
+
+// ── Session detail ──
+function renderDetail() {
+  var s = currentSession(); if (!s) return;
+  document.getElementById('detail-nav-title').textContent = s.name;
+  document.getElementById('detail-name').textContent = s.name;
+  var total = 0;
+  for (var i = 0; i < s.players.length; i++) total += s.players[i].buyins;
+  document.getElementById('stat-players').textContent = s.players.length;
+  document.getElementById('stat-buyins').textContent = total;
+  document.getElementById('stat-hands').textContent = total;
+  var handVal = hv(s);
+  document.getElementById('stat-points').textContent = fmt(total * handVal);
+  document.getElementById('toggle-makeup').checked = (s.makeupEnabled !== false);
+
+  var el = document.getElementById('players-list');
+  if (!s.players.length) {
+    el.innerHTML = '<div class="empty"><div class="icon">👤</div><p>No players yet.<br>Tap "Add Player" to begin.</p></div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < s.players.length; i++) {
+    var p = s.players[i];
+    var color = COLORS[i % COLORS.length];
+    var qAmounts = [2, 4, 5, 6];
+    var qBtns = '';
+    for (var k = 0; k < qAmounts.length; k++) {
+      qBtns += '<button class="qadd-btn" data-qadd="' + p.id + '" data-amt="' + qAmounts[k] + '">+' + qAmounts[k] + '</button>';
+    }
+    qBtns += '<button class="qadd-btn" data-qadd-custom="' + p.id + '">Custom</button>';
+    html += '<div class="player-card">' +
+      '<div class="player-card-top">' +
+        '<div class="player-avatar" style="background:' + color + '">' + esc(p.name.charAt(0).toUpperCase()) + '</div>' +
+        '<div class="player-info">' +
+          '<div class="name">' + esc(p.name) + '</div>' +
+          '<div class="sub">' + p.buyins + ' buy-in' + (p.buyins !== 1 ? 's' : '') + ' · ' + p.buyins + ' hand' + (p.buyins !== 1 ? 's' : '') + '</div>' +
+          '<div class="pts">' + fmt(p.buyins * handVal) + ' pts</div>' +
+        '</div>' +
+        '<button class="undo-btn" data-undo="' + p.id + '">↩</button>' +
+        '<button class="buy-btn" data-buy="' + p.id + '">+</button>' +
+        '<button class="remove-btn" data-remove="' + p.id + '">✕</button>' +
+      '</div>' +
+      '<div class="quick-add-row">' + qBtns + '</div>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function addPlayer() {
+  var name = document.getElementById('input-player-name').value.trim();
+  if (!name) { document.getElementById('input-player-name').focus(); return; }
+  var s = currentSession();
+  s.players.push({ id: uid(), name: name, buyins: 0, makeupTxns: [], cashout: null });
+  save(); closeModal('modal-player'); renderDetail();
+}
+
+// ── Chip Count page ──
+function renderChips() {
+  var s = currentSession(); if (!s) return;
+  var handVal = hv(s);
+  var html = '';
+  for (var i = 0; i < s.players.length; i++) {
+    var p = s.players[i];
+    var color = COLORS[i % COLORS.length];
+    var hasCO = (p.cashout !== null && p.cashout !== undefined);
+    var plHtml = '<div class="pl-badge" style="color:var(--muted)">—</div>';
+    if (hasCO) {
+      var diff = p.cashout - p.buyins * handVal;
+      plHtml = '<div class="pl-badge ' + (diff > 0 ? 'profit' : diff < 0 ? 'loss' : 'even') + '">' + fmtDiff(diff) + '</div>';
+    }
+    html += '<div class="co-player" data-handval="' + handVal + '">' +
+      '<div class="co-top">' +
+        '<div class="player-avatar" style="background:' + color + '">' + esc(p.name.charAt(0).toUpperCase()) + '</div>' +
+        '<div class="player-info">' +
+          '<div class="name">' + esc(p.name) + '</div>' +
+          '<div class="sub">' + p.buyins + ' hand' + (p.buyins !== 1 ? 's' : '') + ' · ' + fmt(p.buyins * handVal) + ' pts invested</div>' +
+        '</div>' +
+        plHtml +
+      '</div>' +
+      '<div class="co-input-row">' +
+        '<label>Chip count</label>' +
+        '<input class="co-input chip-input" type="number" min="0" placeholder="Enter points" data-pid="' + p.id + '" value="' + (hasCO ? p.cashout : '') + '">' +
+      '</div>' +
+    '</div>';
+  }
+  document.getElementById('chip-list').innerHTML = html;
+  var inputs = document.querySelectorAll('.chip-input');
+  for (var j = 0; j < inputs.length; j++) inputs[j].addEventListener('input', onChipInput);
+}
+
+function onChipInput(e) {
+  var pid = e.target.getAttribute('data-pid');
+  var val = parseInt(e.target.value, 10);
+  var s = currentSession();
+  var p = null;
+  for (var i = 0; i < s.players.length; i++) { if (s.players[i].id === pid) { p = s.players[i]; break; } }
+  if (!p) return;
+  var badge = e.target.closest('.co-player').querySelector('.pl-badge');
+  var handVal = parseInt(e.target.closest('.co-player').getAttribute('data-handval'), 10) || DEFAULT_HV;
+  if (!isNaN(val) && val >= 0) {
+    var diff = val - p.buyins * handVal;
+    badge.textContent = fmtDiff(diff);
+    badge.className = 'pl-badge ' + (diff > 0 ? 'profit' : diff < 0 ? 'loss' : 'even');
+    badge.style.color = '';
+  } else {
+    badge.textContent = '—'; badge.className = 'pl-badge'; badge.style.color = 'var(--muted)';
+  }
+}
+
+function confirmChips() {
+  var s = currentSession();
+  var inputs = document.querySelectorAll('.chip-input');
+  for (var i = 0; i < inputs.length; i++) {
+    var val = parseInt(inputs[i].value, 10);
+    if (isNaN(val) || val < 0) { alert('Please enter chip count for all players.'); inputs[i].focus(); return; }
+  }
+  for (var i = 0; i < inputs.length; i++) {
+    var pid = inputs[i].getAttribute('data-pid');
+    var val = parseInt(inputs[i].value, 10);
+    for (var j = 0; j < s.players.length; j++) {
+      if (s.players[j].id === pid) { s.players[j].cashout = val; break; }
+    }
+  }
+  save();
+  if (s.makeupEnabled !== false) showMakeup(); else showSummary();
+}
+
+// ── Make Up page ──
+function renderMakeup() {
+  var s = currentSession(); if (!s) return;
+  var mu = computeMu(s);
+  var handVal = hv(s);
+  var html = '';
+  for (var i = 0; i < s.players.length; i++) {
+    var p = s.players[i];
+    var color = COLORS[i % COLORS.length];
+    var chipCount = p.cashout || 0;
+    var m = mu[p.id];
+    var finalPL = playerPL(p, m, handVal);
+    var plClass = finalPL > 0 ? 'profit' : (finalPL < 0 ? 'loss' : 'even');
+    var tags = '';
+    if (m.received > 0) tags += '<span class="makeup-tag">🤝 received ' + fmtMu(m.received, handVal) + '</span> ';
+    if (m.given > 0) tags += '<span class="given-tag">↑ gave ' + fmtMu(m.given, handVal) + '</span>';
+    var tagsHtml = tags ? '<div style="margin-top:4px">' + tags + '</div>' : '';
+    var isLoser = chipCount < p.buyins * handVal;
+    var hasTxns = (p.makeupTxns || []).length > 0;
+    html += '<div class="co-player">' +
+      '<div class="co-top">' +
+        '<div class="player-avatar" style="background:' + color + '">' + esc(p.name.charAt(0).toUpperCase()) + '</div>' +
+        '<div class="player-info">' +
+          '<div class="name">' + esc(p.name) + '</div>' +
+          '<div class="sub">Chip count: ' + fmt(chipCount) + ' · invested: ' + fmt(p.buyins * handVal) + ' pts</div>' +
+          tagsHtml +
+        '</div>' +
+        '<div class="pl-badge ' + plClass + '">' + fmtDiff(finalPL) + '</div>' +
+      '</div>' +
+      (isLoser
+        ? '<div class="mu-row">' +
+            '<button class="mu-add-btn" data-mu-add="' + p.id + '">🤝 Make Up</button>' +
+            (hasTxns ? '<button class="mu-undo-btn" data-mu-undo="' + p.id + '">↩ Undo Last</button>' : '') +
+          '</div>'
+        : '') +
+    '</div>';
+  }
+  document.getElementById('makeup-list').innerHTML = html;
+}
+
+// ── Summary page ──
+function renderSummary() {
+  var s = currentSession(); if (!s) return;
+  var mu = computeMu(s);
+  var handVal = hv(s);
+
+  var players = s.players.slice().sort(function(a, b) {
+    return playerPL(b, mu[b.id], handVal) - playerPL(a, mu[a.id], handVal);
+  });
+
+  var totalHands = 0, totalInvested = 0;
+  for (var i = 0; i < s.players.length; i++) {
+    totalHands += s.players[i].buyins;
+    totalInvested += s.players[i].buyins * handVal;
+  }
+
+  var totalsHtml = '<div class="summary-totals">' +
+    '<h2>' + esc(s.name) + ' · ' + s.date + '</h2>' +
+    '<div class="stats-row" style="margin-top:12px">' +
+      '<div class="stat-box"><div class="val">' + s.players.length + '</div><div class="key">Players</div></div>' +
+      '<div class="stat-box"><div class="val">' + totalHands + '</div><div class="key">Total Hands</div></div>' +
+      '<div class="stat-box"><div class="val">' + fmt(totalInvested) + '</div><div class="key">Total Points</div></div>' +
+    '</div>' +
+  '</div>';
+
+  var RANKS = ['🥇','🥈','🥉'];
+  var cardsHtml = '';
+  for (var i = 0; i < players.length; i++) {
+    var p = players[i];
+    var color = COLORS[s.players.indexOf(p) % COLORS.length];
+    var m = mu[p.id];
+    var chipCount = p.cashout || 0;
+    var finalPL = playerPL(p, m, handVal);
+    var cardClass = finalPL > 0 ? 'win' : (finalPL < 0 ? 'loss' : 'even');
+    var plClass = finalPL > 0 ? 'profit' : (finalPL < 0 ? 'loss' : 'even');
+    var rank = i < 3 ? RANKS[i] : '<span style="font-size:0.8rem;font-weight:800;color:var(--muted)">' + (i + 1) + '</span>';
+    var detail = p.buyins + ' hand' + (p.buyins !== 1 ? 's' : '') + ' · chip count: ' + fmt(chipCount) + ' pts';
+    if (m.received > 0) detail += ' · 🤝 received ' + fmtMu(m.received, handVal);
+    if (m.given > 0) detail += ' · gave ' + fmtMu(m.given, handVal);
+    var handsVal = finalPL / handVal;
+    cardsHtml += '<div class="summary-card ' + cardClass + '">' +
+      '<div class="rank-badge">' + rank + '</div>' +
+      '<div class="player-avatar" style="background:' + color + '">' + esc(p.name.charAt(0).toUpperCase()) + '</div>' +
+      '<div class="summary-info">' +
+        '<div class="name">' + esc(p.name) + '</div>' +
+        '<div class="detail">' + detail + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;flex-shrink:0">' +
+        '<div class="summary-pl ' + plClass + '">' + fmtDiff(finalPL) + '</div>' +
+        '<div style="font-size:0.7rem;color:var(--muted);margin-top:3px">' + (handsVal >= 0 ? '+' : '') + handsVal.toFixed(1).replace(/\.0$/,'') + ' hand' + (Math.abs(handsVal) !== 1 ? 's' : '') + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  document.getElementById('summary-list').innerHTML = totalsHtml + cardsHtml;
+}
+
+// ── Frequent Players ──
+function getFrequentPlayers() {
+  var s = currentSession();
+  var currentNames = {};
+  if (s) { for (var i = 0; i < s.players.length; i++) currentNames[s.players[i].name.toLowerCase()] = true; }
+  var counts = {};
+  for (var i = 0; i < state.sessions.length; i++) {
+    var sess = state.sessions[i];
+    if (s && sess.id === s.id) continue;
+    for (var j = 0; j < sess.players.length; j++) {
+      var name = sess.players[j].name;
+      counts[name] = (counts[name] || 0) + 1;
+    }
+  }
+  var list = [];
+  for (var name in counts) { if (counts.hasOwnProperty(name)) list.push({ name: name, count: counts[name] }); }
+  list.sort(function(a, b) { return b.count - a.count; });
+  return { list: list, currentNames: currentNames };
+}
+
+function renderFrequentPlayers() {
+  var s = currentSession();
+  var data = getFrequentPlayers();
+  var el = document.getElementById('freq-list');
+  if (!data.list.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px 0"><div class="icon">👥</div><p>No frequent players yet.<br>They\'ll appear here after more sessions.</p></div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < data.list.length; i++) {
+    var fp = data.list[i];
+    var alreadyIn = data.currentNames[fp.name.toLowerCase()];
+    html += '<div class="freq-chip' + (alreadyIn ? ' added' : '') + '" data-freq-name="' + esc(fp.name) + '">' +
+      '<div>' +
+        '<div class="fc-name">' + esc(fp.name) + '</div>' +
+        '<div class="fc-meta">' + fp.count + ' session' + (fp.count !== 1 ? 's' : '') + '</div>' +
+      '</div>' +
+      '<div class="fc-badge">' + (alreadyIn ? '✓ In session' : '+ Add') + '</div>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+document.getElementById('btn-frequent').addEventListener('click', function() {
+  renderFrequentPlayers();
+  openModal('modal-frequent');
+});
+document.getElementById('btn-frequent-close').addEventListener('click', function() { closeModal('modal-frequent'); });
+document.getElementById('freq-list').addEventListener('click', function(e) {
+  var chip = e.target.closest('[data-freq-name]');
+  if (!chip || chip.classList.contains('added')) return;
+  var name = chip.getAttribute('data-freq-name');
+  var s = currentSession(); if (!s) return;
+  s.players.push({ id: uid(), name: name, buyins: 0, makeupTxns: [], cashout: null });
+  save(); renderDetail(); renderFrequentPlayers();
+});
+document.getElementById('modal-frequent').addEventListener('click', function(e) { if (e.target === this) closeModal('modal-frequent'); });
+
+// ── Button wiring ──
+document.getElementById('btn-new-session').addEventListener('click', function() {
+  document.getElementById('input-session-name').value = '';
+  // reset hand value picker to default (500)
+  selectedHV = DEFAULT_HV;
+  document.querySelectorAll('.hv-btn').forEach(function(b) { b.classList.remove('selected'); });
+  document.querySelector('.hv-btn[data-hv="500"]').classList.add('selected');
+  document.getElementById('input-hv-custom').style.display = 'none';
+  document.getElementById('input-hv-custom').value = '';
+  openModal('modal-session');
+  setTimeout(function() { document.getElementById('input-session-name').focus(); }, 300);
+});
+document.getElementById('btn-detail-back').addEventListener('click', function() { showSessions(); });
+document.getElementById('btn-end-session').addEventListener('click', function() { showChips(); });
+document.getElementById('btn-chips-back').addEventListener('click', function() { showDetail(); });
+document.getElementById('btn-chips-next').addEventListener('click', function() { confirmChips(); });
+document.getElementById('btn-makeup-back').addEventListener('click', function() { showChips(); });
+document.getElementById('btn-makeup-next').addEventListener('click', function() { save(); showSummary(); });
+document.getElementById('btn-summary-back').addEventListener('click', function() {
+  var s = currentSession();
+  if (s && s.makeupEnabled !== false) showMakeup(); else showChips();
+});
+document.getElementById('btn-done').addEventListener('click', function() { save(); showSessions(); });
+document.getElementById('toggle-makeup').addEventListener('change', function() {
+  var s = currentSession(); if (!s) return;
+  s.makeupEnabled = this.checked; save();
+});
+
+document.getElementById('btn-add-player').addEventListener('click', function() {
+  document.getElementById('input-player-name').value = '';
+  openModal('modal-player');
+  setTimeout(function() { document.getElementById('input-player-name').focus(); }, 300);
+});
+document.getElementById('btn-session-cancel').addEventListener('click', function() { closeModal('modal-session'); });
+document.getElementById('btn-session-create').addEventListener('click', function() { createSession(); });
+
+// ── Hand value preset picker ──
+document.querySelectorAll('.hv-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.hv-btn').forEach(function(b) { b.classList.remove('selected'); });
+    btn.classList.add('selected');
+    var val = btn.getAttribute('data-hv');
+    var customInput = document.getElementById('input-hv-custom');
+    if (val === 'custom') {
+      customInput.style.display = '';
+      selectedHV = 0;
+      customInput.focus();
+    } else {
+      customInput.style.display = 'none';
+      selectedHV = parseInt(val, 10);
+    }
+  });
+});
+document.getElementById('input-hv-custom').addEventListener('input', function() {
+  var v = parseInt(this.value, 10);
+  selectedHV = (v > 0) ? v : 0;
+});
+document.getElementById('btn-player-cancel').addEventListener('click', function() { closeModal('modal-player'); });
+document.getElementById('btn-player-add').addEventListener('click', function() { addPlayer(); });
+
+document.getElementById('input-session-name').addEventListener('keydown', function(e) { if (e.key === 'Enter') createSession(); });
+document.getElementById('input-player-name').addEventListener('keydown', function(e) { if (e.key === 'Enter') addPlayer(); });
+
+// ── Session list clicks ──
+document.getElementById('sessions-list').addEventListener('click', function(e) {
+  var del = e.target.closest('[data-del]');
+  if (del) { deleteSession(del.getAttribute('data-del')); return; }
+  var card = e.target.closest('[data-id]');
+  if (card) { state.currentId = card.getAttribute('data-id'); showDetail(); }
+});
+
+// ── Player buy-in clicks ──
+document.getElementById('players-list').addEventListener('click', function(e) {
+  var s = currentSession();
+  var buyBtn = e.target.closest('[data-buy]');
+  if (buyBtn) {
+    var pid = buyBtn.getAttribute('data-buy');
+    for (var i = 0; i < s.players.length; i++) { if (s.players[i].id === pid) { s.players[i].buyins++; break; } }
+    save(); renderDetail(); return;
+  }
+  var qaddBtn = e.target.closest('[data-qadd]');
+  if (qaddBtn) {
+    var pid = qaddBtn.getAttribute('data-qadd');
+    var amt = parseInt(qaddBtn.getAttribute('data-amt'), 10);
+    for (var i = 0; i < s.players.length; i++) { if (s.players[i].id === pid) { s.players[i].buyins += amt; break; } }
+    save(); renderDetail(); return;
+  }
+  var customBtn = e.target.closest('[data-qadd-custom]');
+  if (customBtn) {
+    var pid = customBtn.getAttribute('data-qadd-custom');
+    var raw = prompt('How many hands to add?');
+    if (raw === null) return;
+    var amt = parseInt(raw, 10);
+    if (isNaN(amt) || amt < 1) { alert('Please enter a valid number.'); return; }
+    for (var i = 0; i < s.players.length; i++) { if (s.players[i].id === pid) { s.players[i].buyins += amt; break; } }
+    save(); renderDetail(); return;
+  }
+  var undoBtn = e.target.closest('[data-undo]');
+  if (undoBtn) {
+    var pid = undoBtn.getAttribute('data-undo');
+    for (var i = 0; i < s.players.length; i++) { if (s.players[i].id === pid && s.players[i].buyins > 0) { s.players[i].buyins--; break; } }
+    save(); renderDetail(); return;
+  }
+  var remBtn = e.target.closest('[data-remove]');
+  if (remBtn) {
+    var pid = remBtn.getAttribute('data-remove');
+    s.players = s.players.filter(function(p) { return p.id !== pid; });
+    save(); renderDetail(); return;
+  }
+});
+
+// ── Make up page clicks ──
+document.getElementById('makeup-list').addEventListener('click', function(e) {
+  var s = currentSession();
+  var addBtn = e.target.closest('[data-mu-add]');
+  if (addBtn) {
+    muTargetId = addBtn.getAttribute('data-mu-add');
+    muDonorId = null;
+    var recipient = null;
+    for (var i = 0; i < s.players.length; i++) { if (s.players[i].id === muTargetId) { recipient = s.players[i]; break; } }
+    var mu = computeMu(s);
+    var handVal = hv(s);
+    var received = mu[muTargetId].received;
+    document.getElementById('mu-modal-title').textContent = 'Make Up — ' + recipient.name;
+    document.getElementById('mu-modal-sub').textContent =
+      'Chip count: ' + fmt(recipient.cashout || 0) + ' pts · ' + recipient.buyins + ' hands invested' +
+      (received > 0 ? ' · already received ' + fmtMu(received, handVal) : '');
+    document.getElementById('mu-hands-label').textContent = '(×' + fmt(handVal) + ' pts)';
+    // Render donor buttons — only winning players
+    var donorHtml = '';
+    for (var j = 0; j < s.players.length; j++) {
+      var dp = s.players[j];
+      if (dp.id === muTargetId) continue;
+      var dm = mu[dp.id];
+      var dPL = playerPL(dp, dm, handVal);
+      if (dPL > 0) {
+        donorHtml += '<button class="donor-btn" data-donor="' + dp.id + '">' + esc(dp.name) + '<br><span style="font-size:0.75rem;color:var(--green)">+' + fmt(dPL) + '</span></button>';
+      }
+    }
+    document.getElementById('mu-donor-btns').innerHTML = donorHtml || '<span style="font-size:0.85rem;color:var(--muted)">No winning players available</span>';
+    document.getElementById('input-mu-hands').value = '';
+    document.getElementById('input-mu-chips').value = '';
+    document.getElementById('mu-total-preview').textContent = '';
+    openModal('modal-makeup');
+    return;
+  }
+  var undoBtn = e.target.closest('[data-mu-undo]');
+  if (undoBtn) {
+    var pid = undoBtn.getAttribute('data-mu-undo');
+    for (var i = 0; i < s.players.length; i++) {
+      if (s.players[i].id === pid) {
+        var txns = s.players[i].makeupTxns || [];
+        if (txns.length > 0) s.players[i].makeupTxns.pop();
+        break;
+      }
+    }
+    save(); renderMakeup(); return;
+  }
+});
+
+// ── Donor button selection ──
+document.getElementById('mu-donor-btns').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-donor]');
+  if (!btn) return;
+  muDonorId = btn.getAttribute('data-donor');
+  var all = document.querySelectorAll('.donor-btn');
+  for (var i = 0; i < all.length; i++) all[i].classList.remove('selected');
+  btn.classList.add('selected');
+  setTimeout(function() { document.getElementById('input-mu-hands').focus(); }, 100);
+});
+
+// ── Make up modal ──
+function calcMuTotal() {
+  var s = currentSession();
+  var hands = parseInt(document.getElementById('input-mu-hands').value, 10) || 0;
+  var chips = parseInt(document.getElementById('input-mu-chips').value, 10) || 0;
+  return hands * hv(s) + chips;
+}
+function updateMuPreview() {
+  var total = calcMuTotal();
+  document.getElementById('mu-total-preview').textContent = total > 0 ? 'Total make up: +' + fmt(total) + ' pts' : '';
+}
+document.getElementById('input-mu-hands').addEventListener('input', updateMuPreview);
+document.getElementById('input-mu-chips').addEventListener('input', updateMuPreview);
+
+document.getElementById('btn-mu-cancel').addEventListener('click', function() { closeModal('modal-makeup'); });
+document.getElementById('btn-mu-confirm').addEventListener('click', function() {
+  if (!muDonorId) { alert('Please select who is giving the make up.'); return; }
+  var total = calcMuTotal();
+  if (total < 1) { document.getElementById('input-mu-hands').focus(); return; }
+  var s = currentSession();
+  for (var i = 0; i < s.players.length; i++) {
+    if (s.players[i].id === muTargetId) {
+      if (!s.players[i].makeupTxns) s.players[i].makeupTxns = [];
+      s.players[i].makeupTxns.push({ pts: total, donorId: muDonorId });
+      break;
+    }
+  }
+  save(); closeModal('modal-makeup'); renderMakeup();
+});
+document.getElementById('input-mu-hands').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('btn-mu-confirm').click(); });
+document.getElementById('input-mu-chips').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('btn-mu-confirm').click(); });
+
+// ── Close modals on overlay tap ──
+['modal-session','modal-player','modal-makeup'].forEach(function(id) {
+  document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) closeModal(id); });
+});
+
+// ── Init ──
+load();
+showSessions();
+</script>
+</body>
+</html>
