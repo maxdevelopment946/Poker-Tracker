@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Poker Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 :root {
@@ -354,17 +355,29 @@ var state = { sessions: [], currentId: null };
 var COLORS = ['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#f97316','#06b6d4','#84cc16'];
 var muTargetId = null;
 var muDonorId = null;
-var selectedHV = DEFAULT_HV; // hand value chosen in new-session modal
+var selectedHV = DEFAULT_HV;
 
 function hv(s) { return (s && s.handValue) || DEFAULT_HV; }
 
+// ── Supabase ──
+var SUPABASE_URL = 'https://akwhzgmjjzelqkdpcnqm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrd2h6Z21qanplbHFrZHBjbnFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTczNzUsImV4cCI6MjA5Nzk3MzM3NX0.k7LLxW0qGuObU6TvnaowyJ8v-oSkL0WuXzMasTqdRQc';
+var db = null;
+function initSupabase() {
+  try { db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
+}
+
 // ── Storage ──
-function save() { try { localStorage.setItem('poker_v7', JSON.stringify(state)); } catch(e) {} }
+function save() {
+  try { localStorage.setItem('poker_v7', JSON.stringify(state)); } catch(e) {}
+  if (db) {
+    db.from('poker_state').upsert({ id: 'default', data: state, updated_at: new Date().toISOString() }).then(function(){}).catch(function(){});
+  }
+}
 function load() {
   try {
     var d = localStorage.getItem('poker_v7');
     if (d) { state = JSON.parse(d); return; }
-    // migrate from v6
     var old = localStorage.getItem('poker_v6');
     if (old) {
       state = JSON.parse(old);
@@ -380,6 +393,16 @@ function load() {
       save();
     }
   } catch(e) {}
+}
+function loadFromSupabase() {
+  if (!db) return;
+  db.from('poker_state').select('data').eq('id', 'default').single().then(function(res) {
+    if (res.data && res.data.data) {
+      state = res.data.data;
+      try { localStorage.setItem('poker_v7', JSON.stringify(state)); } catch(e) {}
+      showSessions();
+    }
+  }).catch(function(){});
 }
 
 // ── Utils ──
@@ -1000,8 +1023,10 @@ document.getElementById('input-mu-chips').addEventListener('keydown', function(e
 });
 
 // ── Init ──
+initSupabase();
 load();
 showSessions();
+loadFromSupabase();
 </script>
 </body>
 </html>
